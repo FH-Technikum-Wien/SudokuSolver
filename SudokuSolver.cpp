@@ -1,56 +1,97 @@
 #include <iostream>
+#include <vector>
+#include <set>
 
 
 // 81 + 1 for 'ending null'
 #define SUDOKU_SIZE 82
 
+
+class Cell
+{
+public:
+	bool isLocked = false;
+
+	Cell() {};
+	Cell(std::set<int> possibleNumbers);
+	void lockNumber(int number);
+	bool removeNumber(int number);
+	int getLockedNumber();
+
+private:
+	std::set<int> possibleNumbers{ 1,2,3,4,5,6,7,8,9 };
+
+};
+
+Cell::Cell(std::set<int> possibleNumbers)
+{
+	this->possibleNumbers = possibleNumbers;
+}
+
+void Cell::lockNumber(int number)
+{
+	isLocked = true;
+	possibleNumbers = { number };
+}
+
+bool Cell::removeNumber(int number)
+{
+	if (isLocked || possibleNumbers.find(number) == possibleNumbers.end())
+		return false;
+	possibleNumbers.erase(number);
+	if (possibleNumbers.size() == 1)
+		isLocked = true;
+	return true;
+}
+
+int Cell::getLockedNumber() {
+	if (!isLocked)
+		return -1;
+	return *possibleNumbers.begin();
+}
+
+
 void printSudoku(int* sudoku);
+void updatePossibleCellNumbers(Cell* sudokuCells);
 
 int main()
 {
 	int sudoku[SUDOKU_SIZE];
+	Cell sudokuCells[SUDOKU_SIZE];
 	char input[SUDOKU_SIZE];
 	std::cin >> input;
 
 	// Convert chars to ints
-	for (unsigned int i = 0; i < SUDOKU_SIZE; i++)
-		sudoku[i] = input[i] - '0';
+	for (unsigned int i = 0; i < SUDOKU_SIZE; i++) {
+		int number = input[i] - '0';
+		sudoku[i] = number;
+		if (number != 0) {
+			sudokuCells[i].lockNumber(number);
+		}
+	}
+	updatePossibleCellNumbers(sudokuCells);
 
 	printSudoku(sudoku);
 
 	return 0;
 }
 
+
+
 void printSudoku(int* sudoku)
 {
 	std::cout << "done!\n";
 	unsigned int index = 0;
-	/*	Print sections:
-		8 5 9 | 6 1 2 | 4 3 7
-		7 2 3 | 8 5 4 | 1 6 9
-		1 6 4 | 3 7 9 | 5 2 8
-		------+-------+------
-		9 8 6 | 1 4 7 | 3 5 2
-		3 7 5 | 2 6 8 | 9 1 4
-		2 4 1 | 5 9 3 | 7 8 6
-		------+-------+------
-		4 3 2 | 9 8 1 | 6 7 5
-		6 1 7 | 4 2 5 | 8 9 3
-		5 9 8 | 7 3 6 | 2 4 1
-	*/
+	//	Print region.
 	for (unsigned int i = 0; i < 3; i++)
 	{
-		/*	Print section-rows
-			8 5 9 | 6 1 2 | 4 3 7
-			7 2 3 | 8 5 4 | 1 6 9
-			1 6 4 | 3 7 9 | 5 2 8
-		*/
+		//	Print section.
 		for (unsigned int j = 0; j < 3; j++)
 		{
-			// Print row-numbers: 8 5 9 | 6 1 2 | 4 3 7
+			// Print row.
 			for (unsigned int k = 0; k < 3; k++)
 			{
-				// Print numbers: 8 5 9
+				// Print number.
 				for (unsigned l = 0; l < 3; l++)
 				{
 					if (l != 0)
@@ -68,3 +109,54 @@ void printSudoku(int* sudoku)
 
 	}
 }
+
+void updatePossibleCellNumbers(Cell* sudokuCells)
+{
+	bool hasRemoved = true;
+	while (hasRemoved)
+	{
+		hasRemoved = false;
+
+		for (unsigned int cellIndex = 0; cellIndex < SUDOKU_SIZE - 1; cellIndex++)
+		{
+			Cell cell = sudokuCells[cellIndex];
+			if (!cell.isLocked)
+				continue;
+
+			// Get region
+			int regionIndex = cellIndex / 27;
+			// Get section 
+			int sectionIndex = (cellIndex / 3) % 3 + regionIndex * 3;
+
+			// Calculate start index of current section
+			unsigned int sectionStartIndex = regionIndex * 27 + ((sectionIndex % 3) * 3);
+			// Go through columns
+			for (unsigned int i = 0; i < 3; i++)
+			{
+				// Go through rows
+				for (unsigned int j = 0; j < 3; j++)
+				{
+					unsigned currentCellIndex = j * 9 + i + sectionStartIndex;
+					if (currentCellIndex == cellIndex)
+						continue;
+					if(sudokuCells[currentCellIndex].removeNumber(cell.getLockedNumber()))
+						hasRemoved = true;
+				}
+			}
+		}
+	}
+}
+
+/*
+8 5 0 | 0 0 2 | 4 0 0
+7 2 0 | 0 0 0 | 0 0 9
+0 0 4 | 0 0 0 | 0 0 0
+------+-------+------
+0 0 0 | 1 0 7 | 0 0 2
+3 0 5 | 0 0 0 | 9 0 0
+0 4 0 | 0 0 0 | 0 0 0
+------+-------+------
+0 0 0 | 0 8 0 | 0 7 0
+0 1 7 | 0 0 0 | 0 0 0
+0 0 0 | 0 3 6 | 0 4 0
+*/
