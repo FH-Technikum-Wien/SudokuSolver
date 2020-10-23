@@ -46,12 +46,12 @@ bool Cell::removeNumber(int number)
 
 int Cell::getLockedNumber() {
 	if (!isLocked)
-		return -1;
+		return 0;
 	return *possibleNumbers.begin();
 }
 
 
-void printSudoku(int* sudoku);
+void printSudoku(Cell* sudoku);
 void updatePossibleCellNumbers(Cell* sudokuCells);
 
 int main()
@@ -71,14 +71,14 @@ int main()
 	}
 	updatePossibleCellNumbers(sudokuCells);
 
-	printSudoku(sudoku);
+	printSudoku(sudokuCells);
 
 	return 0;
 }
 
 
 
-void printSudoku(int* sudoku)
+void printSudoku(Cell* sudoku)
 {
 	std::cout << "done!\n";
 	unsigned int index = 0;
@@ -96,7 +96,7 @@ void printSudoku(int* sudoku)
 				{
 					if (l != 0)
 						std::cout << " ";
-					std::cout << sudoku[index];
+					std::cout << sudoku[index].getLockedNumber();
 					index++;
 				}
 				if (k != 2)
@@ -116,30 +116,48 @@ void updatePossibleCellNumbers(Cell* sudokuCells)
 	while (hasRemoved)
 	{
 		hasRemoved = false;
-
+		
 		for (unsigned int cellIndex = 0; cellIndex < SUDOKU_SIZE - 1; cellIndex++)
 		{
 			Cell cell = sudokuCells[cellIndex];
 			if (!cell.isLocked)
 				continue;
 
+			// CHECK SECTIONS
 			// Get region
 			int regionIndex = cellIndex / 27;
 			// Get section 
 			int sectionIndex = (cellIndex / 3) % 3 + regionIndex * 3;
 
-			// Calculate start index of current section
+			// Calculate start index of current section.
 			unsigned int sectionStartIndex = regionIndex * 27 + ((sectionIndex % 3) * 3);
-			// Go through columns
+			// Go through columns in section.
 			for (unsigned int i = 0; i < 3; i++)
 			{
-				// Go through rows
+				// Go through rows in section.
 				for (unsigned int j = 0; j < 3; j++)
 				{
 					unsigned currentCellIndex = j * 9 + i + sectionStartIndex;
 					if (currentCellIndex == cellIndex)
 						continue;
 					if(sudokuCells[currentCellIndex].removeNumber(cell.getLockedNumber()))
+						hasRemoved = true;
+				}
+			}
+
+			// CHECK ROWS & COLUMNS
+			for (unsigned int i = 0; i < 9; i++)
+			{
+				// Check all cells in row.
+				unsigned int rowIndex = (cellIndex / 9) * 9 + i;
+				if (rowIndex != cellIndex) {
+					if (sudokuCells[rowIndex].removeNumber(cell.getLockedNumber()))
+						hasRemoved = true;
+				}
+				// Check all cells in column.
+				unsigned int columnIndex = (cellIndex % 9) + (i * 9);
+				if (columnIndex != cellIndex) {
+					if (sudokuCells[columnIndex].removeNumber(cell.getLockedNumber()))
 						hasRemoved = true;
 				}
 			}
